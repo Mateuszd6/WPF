@@ -78,10 +78,20 @@ let make_and_bal left_subtree root_val right_subtree =
     make_set left_subtree root_val right_subtree
 
 (* TODO: Do I really need it? *)
-let balance = function
-  | Nil -> Nil
-  | Node(left_subtree, root_val, right_subtree, _, _) -> 
-    make_and_bal left_subtree root_val right_subtree;;
+(* let balance = function
+   | Nil -> Nil
+   | Node(left_subtree, root_val, right_subtree, _, _) -> 
+    make_and_bal left_subtree root_val right_subtree;; *)
+
+let rec find_containing k = function
+  | Nil -> false, (0, 0)
+  | Node(left_subtree, (root_x, _), _, _, _) when k < root_x -> 
+    find_containing k left_subtree
+  | Node(_, (_, root_y), right_subtree, _, _) when k > root_y ->
+    find_containing k right_subtree
+  | Node(_, root_interval, _, _, _) -> true, root_interval;;
+
+let rec mem k set = find_containing k set |> fst;;  
 
 (* Add asumming no interval interpolations! *)
 let rec add_simple (x, y) = function
@@ -145,10 +155,6 @@ let rec remove (x, y) set =
   in
   let found_lb, lb_val = found_any_interpol set
   in
-  (* print_string ("Interpol returned: " 
-                ^ (string_of_bool found_lb));
-     Printf.printf "[%d;%d]\n" (fst lb_val) (snd lb_val); *)
-
   (* TODO: This looks bad, althoung works! *)
   if found_lb then
     if fst lb_val < x && snd lb_val > y then
@@ -164,7 +170,7 @@ let rec remove (x, y) set =
     set;;
 
 let add (x, y) set =
-  let rec find_overlap (x, y) go_left = function 
+  (* let rec find_overlap (x, y) go_left = function 
     | Node(_, (_, root_y), right_subtree, _, _) when root_y + 1 < x -> 
       find_overlap (x, y) go_left right_subtree
     | Node(left_subtree, (root_x, _), _, _, _) when y + 1 < root_x -> 
@@ -183,12 +189,14 @@ let add (x, y) set =
       if go_left then find_overlap (x, y) go_left right_subtree 
       else find_overlap (x, y) go_left left_subtree
     | Nil -> false, (0, 0)
+  in *)
+  let found_left, (left_x, left_y) = (* find_overlap (x-1, y+1) true set *)
+    find_containing (x-1) set
+  and found_right, (right_x, right_y) = (* find_overlap (x-1, y+1) false set *)
+    find_containing (y+1) set
   in
-  let found_left, (left_x, left_y) = find_overlap (x-1, y+1) true set
-  and found_right, (right_x, right_y) = find_overlap (x-1, y+1) false set
-  in
-  let x = if found_left && left_x <= y then min x left_x else x
-  and y = if found_right && right_y >= y then max y right_y else y
+  let x = if found_left (* && left_x <= y *) then min x left_x else x
+  and y = if found_right (* && right_y >= y  *) then max y right_y else y
   in
   remove (x, y) set |> add_simple (x, y);;
 
@@ -214,16 +222,6 @@ let rec split split_with = function
         else right_subtree |> add_simple (split_with+1, root_y)
       in
       new_left_subtree, true, new_right_subtree;;
-
-let rec find_containing k = function
-  | Nil -> false, (0, 0)
-  | Node(left_subtree, (root_x, _), _, _, _) when k < root_x -> 
-    find_containing k left_subtree
-  | Node(_, (_, root_y), right_subtree, _, _) when k > root_y ->
-    find_containing k right_subtree
-  | Node(_, root_interval, _, _, _) -> true, root_interval;;
-
-let rec mem k set = find_containing k set |> fst;;
 
 (* function
    | Nil -> false
@@ -549,7 +547,7 @@ let check_correctness () : unit =
   end;
   Printf.printf "- OK!\n"; flush stdout
 
-(* let _ =
+let _ =
    Random.self_init ();
    Printf.printf "Starting.\n"; flush stdout;
    let i = ref 0 in
@@ -568,4 +566,4 @@ let check_correctness () : unit =
       | TestSplit -> test_split ()
       | TestBelow -> test_below ()
     in check_correctness ()
-   done  *)
+   done 
