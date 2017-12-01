@@ -1,3 +1,16 @@
+let (+) a b =
+  if (a < 0 && b >= 0) || (a >= b && b < 0) then a + b 
+  else if a >= 0 && b >= 0 then
+    if a + b < min a b then max_int
+    else a + b
+  else if a < 0 && b < 0 then 
+    if a + b > max a b then min_int
+    else a + b
+  else failwith "";;
+
+let (-) a b =
+  a + (-b);;
+
 type t =
   (* Empty set. *)
   | Nil
@@ -17,78 +30,77 @@ let get_height = function
 
 let get_numb_elements = function
   | Nil -> 0
-  | Node(_, _, _, _, number) -> number
+  | Node(_, _, _, _, number) -> number;;
+
+let root_count_resp_inf (root_x, root_y) =
+  if root_y < 0 then (root_y - root_x) + 1 
+  else if root_x = min_int then max_int
+  else (root_y -root_x) + 1
 
 let rec fold f set acc =
   match set with 
   | Nil -> acc
-  | Node(left_subtree, root_val, right_subtree, _, _) ->
-    fold (f) right_subtree ((f) root_val (fold (f) left_subtree acc)) 
+  | Node(left_subt, root_val, right_subt, _, _) ->
+    fold (f) right_subt ((f) root_val (fold (f) left_subt acc));;
 
 let elements set = fold (fun x a -> (x::a)) set [] |> List.rev;; 
 
 let iter f set = fold (fun x _ -> f(x) ; ()) set ();;
 
-let make_and_bal left_subtree root_val right_subtree = 
-  let make_set left_subtree root_val right_subtree =
-    Node(left_subtree, root_val, right_subtree, 
-         max (get_height left_subtree) (get_height right_subtree) + 1, 
-         get_numb_elements left_subtree + (snd root_val - fst root_val + 1) 
-         + get_numb_elements right_subtree)
+let make_and_bal left_subt root_val right_subt = 
+  let make_set left_subt (root_x, root_y) right_subt =
+    Node(left_subt, (root_x, root_y), right_subt, 
+         max (get_height left_subt) (get_height right_subt) + 1, 
+         ((root_y - root_x) + 1) + (get_numb_elements left_subt) + 
+         get_numb_elements right_subt)
   in
   let rotate_left = function
-    | Node(Node(left_left_subtree, left_root_val, left_right_subtree, _, _), 
-           root_val, right_subtree, _, _) -> 
-      make_set left_left_subtree left_root_val 
-        (make_set left_right_subtree root_val right_subtree)
+    | Node(Node(left_left_subt, left_root_val, left_right_subtree, _, _), 
+           root_val, right_subt, _, _) -> 
+      make_set left_left_subt left_root_val 
+        (make_set left_right_subtree root_val right_subt)
     (* TODO: Wyciszenie ostrzerzenia o niewyczerpanym matchu. *)
     | _-> raise Not_found
   and rotate_right = function
-    | Node(left_subtree, root_val, 
-           Node(right_left_subtree, right_root_val, right_right_subtree, _, _), _, _) -> 
-      make_set (make_set left_subtree root_val right_left_subtree)
+    | Node(left_subt, root_val, 
+           Node(right_left_subt, right_root_val, right_right_subtree, _, _), _, _) -> 
+      make_set (make_set left_subt root_val right_left_subt)
         right_root_val right_right_subtree 
     (* TODO: Wyciszenie ostrzerzenia o niewyczerpanym matchu. *)
     | _-> raise Not_found
   and get_height_difference = function 
     | Nil -> 0
-    | Node(left_subtree, _, right_subtree, _, _) -> 
-      get_height left_subtree - get_height right_subtree
+    | Node(left_subt, _, right_subt, _, _) -> 
+      get_height left_subt - get_height right_subt
   in
   let height_difference = 
-    get_height left_subtree - get_height right_subtree
+    get_height left_subt - get_height right_subt
   in
   if height_difference >= 2 then 
-    let left_subtree = 
-      if get_height_difference left_subtree < 0 
-      then rotate_right left_subtree
-      else (assert (get_height_difference left_subtree >= 0) ; left_subtree)
+    let left_subt = 
+      if get_height_difference left_subt < 0 
+      then rotate_right left_subt
+      else (assert (get_height_difference left_subt >= 0) ; left_subt)
     in
-    rotate_left (make_set left_subtree root_val right_subtree)
+    rotate_left (make_set left_subt root_val right_subt)
   else if height_difference <= -2 then 
-    let right_subtree = 
-      if get_height_difference right_subtree > 0 
-      then rotate_left right_subtree (* TODO: was rotate_right*)
-      else (assert (get_height_difference right_subtree <= 0) ; right_subtree)
+    let right_subt = 
+      if get_height_difference right_subt > 0 
+      then rotate_left right_subt
+      else (assert (get_height_difference right_subt <= 0) ; right_subt)
     in
-    rotate_right (make_set left_subtree root_val right_subtree)
+    rotate_right (make_set left_subt root_val right_subt)
   else
-    (* TODO: make_set left_subtree root_val right_subtree
+    (* TODO: make_set left_subt root_val right_subt
        3x copy-paste. *)
-    make_set left_subtree root_val right_subtree
-
-(* TODO: Do I really need it? *)
-(* let balance = function
-   | Nil -> Nil
-   | Node(left_subtree, root_val, right_subtree, _, _) -> 
-    make_and_bal left_subtree root_val right_subtree;; *)
+    make_set left_subt root_val right_subt
 
 let rec find_containing k = function
   | Nil -> false, (0, 0)
-  | Node(left_subtree, (root_x, _), _, _, _) when k < root_x -> 
-    find_containing k left_subtree
-  | Node(_, (_, root_y), right_subtree, _, _) when k > root_y ->
-    find_containing k right_subtree
+  | Node(left_subt, (root_x, _), _, _, _) when k < root_x -> 
+    find_containing k left_subt
+  | Node(_, (_, root_y), right_subt, _, _) when k > root_y ->
+    find_containing k right_subt
   | Node(_, root_interval, _, _, _) -> true, root_interval;;
 
 let rec mem k set = find_containing k set |> fst;;  
@@ -96,66 +108,57 @@ let rec mem k set = find_containing k set |> fst;;
 (* Add asumming no interval interpolations! *)
 let rec add_simple (x, y) = function
   | Nil -> make_and_bal Nil (x, y) Nil
-  | Node (left_subtree, (i_beg, i_end), right_subtree, _, _) ->
+  | Node (left_subt, (i_beg, i_end), right_subt, _, _) ->
     (* Simply insert right. *)
     if i_end + 1 < x then 
-      let right_subtree = add_simple (x, y) right_subtree
-      in make_and_bal left_subtree (i_beg, i_end) right_subtree
+      let right_subt = add_simple (x, y) right_subt
+      in make_and_bal left_subt (i_beg, i_end) right_subt
     else if i_beg - 1 > y then 
-      let left_subtree = add_simple (x, y) left_subtree
-      in make_and_bal left_subtree (i_beg, i_end) right_subtree
+      let left_subt = add_simple (x, y) left_subt
+      in make_and_bal left_subt (i_beg, i_end) right_subt
     else raise Not_found;;
 
 let rec remove (x, y) set = 
   let rec get_min_element = function 
-    | Node(Nil, value, right_subtree, _, _) -> value, right_subtree
-    | Node(left_subtree, value, right_subtree, _, _) -> 
-      let min_el, new_left_subtree = get_min_element left_subtree
+    | Node(Nil, value, right_subt, _, _) -> value, right_subt
+    | Node(left_subt, value, right_subt, _, _) -> 
+      let min_el, new_left_subt = get_min_element left_subt
       in
-      min_el, make_and_bal new_left_subtree value right_subtree 
+      min_el, make_and_bal new_left_subt value right_subt 
     | _ -> failwith "Foo"
   and remove_one (x, y) = function
-    | Node(left_subtree, (root_x, root_y), right_subtree, _, _) ->
+    | Node(left_subt, (root_x, root_y), right_subt, _, _) ->
       if root_x = x && root_y = y then 
-        (* Try to take min element from the right subtree if it exist 
-           and make it new root. Respects the case when right subtree is null. 
-           TODO: Probobly no need to balance, I guess left_subtree is balanced
-           already. *)
-        if right_subtree = Nil then 
-          (* TODO: remove. This asersion will check if balance 
-             left_subtree is really required.*)
-          (* let is_balanced = function 
-             | Nil -> true
-             | Node(left_subtree, _, right_subtree, _, _) ->
-              abs (get_height left_subtree - get_height right_subtree) <= 1
-             in
-             assert (is_balanced left_subtree); 
-             balance *)
-          left_subtree
+        (* Try to take min element from the right subtree if it 
+          exist and make it new root. Respects the case when right 
+          subtree is null. *)
+        if right_subt = Nil then 
+          (assert(left_subt |> get_height <= 1) ; left_subt)
         else  
-          let min_el, new_right_subtree = get_min_element right_subtree
+          let min_el, new_right_subtree = get_min_element right_subt
           in 
-          make_and_bal left_subtree min_el new_right_subtree
+          make_and_bal left_subt min_el new_right_subtree
       else if root_x > y then
-        make_and_bal (remove_one (x, y) left_subtree)
-          (root_x, root_y) right_subtree
+        make_and_bal (remove_one (x, y) left_subt)
+          (root_x, root_y) right_subt
       else if root_y < x then
-        make_and_bal left_subtree (root_x, root_y) 
-          (remove_one (x, y) right_subtree)  
+        make_and_bal left_subt (root_x, root_y) 
+          (remove_one (x, y) right_subt)  
       else
         failwith "Foo"
     | _ -> failwith "Foo"
   and found_any_interpol = function 
     | Nil -> false, (0,0)
-    | Node(_, (_, root_y), right_subtree, _, _) when root_y < x ->
-      found_any_interpol right_subtree
-    | Node(left_subtree, (root_x, _), _, _, _) when root_x > y ->
-      found_any_interpol left_subtree
+    | Node(_, (_, root_y), right_subt, _, _) when root_y < x ->
+      found_any_interpol right_subt
+    | Node(left_subt, (root_x, _), _, _, _) when root_x > y ->
+      found_any_interpol left_subt
     | Node(_, (root_x, root_y), _, _, _) -> true, (root_x, root_y)
   in
   let found_lb, lb_val = found_any_interpol set
   in
   (* TODO: This looks bad, althoung works! *)
+  (* TODO: What about MIN/MAX_INTs?? *)
   if found_lb then
     if fst lb_val < x && snd lb_val > y then
       remove (x, y) (remove_one lb_val set
@@ -170,75 +173,53 @@ let rec remove (x, y) set =
     set;;
 
 let add (x, y) set =
-  (* let rec find_overlap (x, y) go_left = function 
-    | Node(_, (_, root_y), right_subtree, _, _) when root_y + 1 < x -> 
-      find_overlap (x, y) go_left right_subtree
-    | Node(left_subtree, (root_x, _), _, _, _) when y + 1 < root_x -> 
-      find_overlap (x, y) go_left left_subtree
-    | Node(left_subtree, (root_x, root_y), right_subtree, _, _) ->
-      if root_x <= y && x <= root_y then
-        let loop_found, loop_value = 
-          if go_left then find_overlap (x, y) go_left left_subtree
-          else find_overlap (x, y) go_left right_subtree
-        in
-        if loop_found then
-          true, loop_value
-        else
-          true, (root_x, root_y)
-      else
-      if go_left then find_overlap (x, y) go_left right_subtree 
-      else find_overlap (x, y) go_left left_subtree
-    | Nil -> false, (0, 0)
-  in *)
-  let found_left, (left_x, left_y) = (* find_overlap (x-1, y+1) true set *)
+  let found_left, (left_x, left_y) =
     find_containing (x-1) set
-  and found_right, (right_x, right_y) = (* find_overlap (x-1, y+1) false set *)
+  and found_right, (right_x, right_y) =
     find_containing (y+1) set
   in
-  let x = if found_left (* && left_x <= y *) then min x left_x else x
-  and y = if found_right (* && right_y >= y  *) then max y right_y else y
+  (* TODO: remove asserts! *)
+  (* x <> min_int and y <> max_int conditions stay here because ints do rotate
+     while we search in found_left/right for x-1 and y+1 values. *)
+  let x = if x <> min_int && found_left then (assert (left_x < x) ; left_x) else x
+  and y = if y <> max_int && found_right then (assert (right_y > y) ; right_y) else y
   in
-  remove (x, y) set |> add_simple (x, y);;
+  set |> remove (x, y) |> add_simple (x, y);;
 
 let rec split split_with = function
   | Nil -> Nil, false, Nil
-  | Node (left_subtree, (root_x, root_y), right_subtree, _, _) -> 
+  | Node (left_subt, (root_x, root_y), right_subt, _, _) -> 
     if split_with < root_x then 
       let split_left, present, split_right = 
-        split split_with left_subtree
+        split split_with left_subt
       in
-      split_left, present, make_and_bal split_right (root_x, root_y) right_subtree
+      split_left, present, make_and_bal split_right (root_x, root_y) right_subt
     else if split_with > root_y then
       let split_left, present, split_right = 
-        split split_with right_subtree
+        split split_with right_subt
       in
-      make_and_bal left_subtree (root_x, root_y) split_left, present, split_right
+      make_and_bal left_subt (root_x, root_y) split_left, present, split_right
     else 
-      let new_left_subtree = 
-        if split_with = root_x then left_subtree
-        else left_subtree |> add_simple (root_x, split_with-1)
+      (* TODO: CARE IF MIN_INT, MAX_INT!!*) 
+      let new_left_subt = 
+        if split_with = root_x then left_subt
+        else left_subt |> add_simple (root_x, split_with-1)
       and new_right_subtree =
-        if split_with = root_y then right_subtree
-        else right_subtree |> add_simple (split_with+1, root_y)
+        if split_with = root_y then right_subt
+        else right_subt |> add_simple (split_with+1, root_y)
       in
-      new_left_subtree, true, new_right_subtree;;
-
-(* function
-   | Nil -> false
-   | Node(left_subtree, (root_x, _), _, _, _) when k < root_x -> 
-   mem k left_subtree 
-   | Node(_, (_, root_y), right_subtree, _, _) when k > root_y ->
-   mem k right_subtree
-   | Node(_, (_, _), _, _, _) -> true;; *)
+      new_left_subt, true, new_right_subtree;;
 
 let rec below k = function 
   | Nil -> 0
-  | Node(left_subtree, (root_x, _), _, _, _) when k < root_x -> 
-    below k left_subtree 
-  | Node(left_subtree, (root_x, root_y), right_subtree, _, _) when k > root_y ->
-    get_numb_elements left_subtree + (root_y - root_x + 1) + below k right_subtree
-  | Node(left_subtree, (root_x, _), _, _, _) ->
-    get_numb_elements left_subtree + (k - root_x + 1);;
+  | Node(left_subt, (root_x, _), _, _, _) 
+    when k < root_x -> below k left_subt 
+  | Node(left_subt, (root_x, root_y), right_subt, _, _) 
+    when k > root_y -> 
+    get_numb_elements left_subt + (root_y - root_x) + 1 
+    + below k right_subt
+  | Node(left_subt, (root_x, _), _, _, _) ->
+    get_numb_elements left_subt + root_count_resp_inf (root_x, k);;
 
 (* ------------------------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
@@ -275,13 +256,13 @@ let debug_is_bst set =
   let rec is_subtree_bst set =
     match set with 
     | Nil -> true (* Empty tree is a BST. *) 
-    | Node(left_subtree, (x, y), right_subtree, _, _) ->
+    | Node(left_subt, (x, y), right_subt, _, _) ->
       (* Current node has BST property... *)
-      comapre_subtrees left_subtree set 
-      && comapre_subtrees set right_subtree  
+      comapre_subtrees left_subt set 
+      && comapre_subtrees set right_subt  
       (* ... and both subtrees have BST property. *)
-      && is_subtree_bst left_subtree 
-      && is_subtree_bst right_subtree
+      && is_subtree_bst left_subt 
+      && is_subtree_bst right_subt
   in
   is_subtree_bst set;;
 
@@ -291,25 +272,25 @@ let debug_is_bst set =
 let debug_is_avl set = 
   let rec is_avl_subtree = function
     | Nil -> true
-    | Node(left_subtree, _, right_subtree, height, _) ->
+    | Node(left_subt, _, right_subt, height, _) ->
       (* Current node has AVL proprty...*)
       (* TODO: Mayby make get_height_diff global? Coz it is used here... *)
-      abs (get_height left_subtree - get_height right_subtree) <= 1 
+      abs (get_height left_subt - get_height right_subt) <= 1 
       (* ... and both subtrees have AVL property. *)
-      && is_avl_subtree right_subtree
-      && is_avl_subtree left_subtree
+      && is_avl_subtree right_subt
+      && is_avl_subtree left_subt
   in
   is_avl_subtree set;;
 
 let debug_number_of_elem_ok set = 
   let rec elem_ok = function
     | Nil -> get_numb_elements Nil = 0
-    | Node(left_subtree, root_val, right_subtree, _, height) ->
-      elem_ok left_subtree 
-      && elem_ok right_subtree 
-      && height = get_numb_elements left_subtree + 
-                  (snd root_val - fst root_val + 1) 
-                  + get_numb_elements right_subtree
+    | Node(left_subt, root_val, right_subt, _, elem_count) ->
+      elem_ok left_subt 
+      && elem_ok right_subt 
+      && elem_count = 
+         get_numb_elements left_subt + (snd root_val - fst root_val) + 1 + 
+         get_numb_elements right_subt
   in
   elem_ok set;;
 
@@ -342,15 +323,6 @@ let el2 = (1,2)::el;;
 
 assert (debug_ok test1);;
 
-(* let print_debug (a, b) text = 
-   " f(" ^ string_of_int a ^ "," ^text ^ ")";;
-
-   let foo = fold (print_debug) test1 "a";;
-   print_string ("\n" ^ foo ^ "\n");; *)
-
-(* let test1 = remove (-19, 75) test1;;
-   assert (debug_ok test1);; *)
-
 let test1 = add (-60, 78) test1;;
 let test1 = add (145, 149) test1;;
 let test1 = add (92, 95) test1;;
@@ -370,19 +342,37 @@ let fe = bar |> fst;;
 
 assert (debug_ok fe && debug_ok se);;
 
-print_string (string_of_bool (bar |> snd));
+print_string (string_of_bool (bar |> snd) ^ "\n");;
 
-assert (1 > 0);;
+(* The number of elements in nodes might be wrong because ints rotate! 
+   (We could have tried adding min_int-1 which is max_int). *)
+let test2 = empty |> add (4, 6) |> add (min_int+1, -1);;
 
-(* 
-iter (fun x -> Printf.printf "[%d;%d] " (fst x) (snd x)) test1;;
-print_string "\n";;
+(* This works on the same trick and above in a 'below' function. *)
+test2 |> below 5 |> string_of_int |> print_string;;
 
-let foo = min_element test1;;
+assert (debug_ok test2);;
 
-List.fold_left (fun a x -> Printf.printf "[%d;%d] " (fst x) (snd x)) 
-  () (elements test1);;
-print_string "\n";; *)
+let test3 = empty |> add (min_int, max_int) |> remove (-30,30) |> add (-100, -100) ;;
+
+(* Check if split respects int_max. *)
+let test_4, should_be_true, should_be_empty = split max_int test3;;
+assert (test_4 |> is_empty |> not);;
+assert (should_be_true);;
+assert (should_be_empty |> is_empty);;
+
+(* Do the same for min_int. *)
+let should_be_empty, should_be_true, test_4 = split min_int test3;;
+assert (test_4 |> is_empty |> not);;
+assert (should_be_true);;
+assert (should_be_empty |> is_empty);;
+
+
+let foo = 3 |> ( * ) 3;;
+
+if foo > 4 then
+  print_string "\nHeyah!\n";;
+
 
 (* =========================*)
 (* =========================*)
@@ -521,7 +511,7 @@ let test_split () : unit =
   let t = [| b; d |] and tt = [| bb; dd |] in
   assert (c = cc);
   intset := t.(side);
-  iset := tt.(side)
+  iset := tt.(side);;
 
 let test_below () : unit =
   let a = random () in
@@ -533,7 +523,7 @@ let test_below () : unit =
   with Assert_failure x ->
     Printf.printf "\nReturned %d, expected %d\n" test c;
     if debug then bt ();
-    raise (Assert_failure(x))
+    raise (Assert_failure(x));;
 
 let check_correctness () : unit =
   if verbose then print_sets ();
@@ -545,25 +535,28 @@ let check_correctness () : unit =
       if debug then bt ();
       raise (Assert_failure(x))
   end;
-  Printf.printf "- OK!\n"; flush stdout
+  Printf.printf "- OK!\n"; flush stdout;;
 
 let _ =
-   Random.self_init ();
-   Printf.printf "Starting.\n"; flush stdout;
-   let i = ref 0 in
-   while true do
-    let () =
-      if clear_step > 0 && !i mod clear_step = 0 then begin
-        Printf.printf "[clear]\n";
-        iset := empty;
-        intset := IntSet.empty
-      end;
-      i := !i + 1;
-      Printf.printf "%d. " !i;
-      match get_action () with
-      | TestAdd -> test_add ()
-      | TestRemove -> test_remove ()
-      | TestSplit -> test_split ()
-      | TestBelow -> test_below ()
-    in check_correctness ()
-   done 
+  if true then
+    begin
+      Random.self_init ();
+      Printf.printf "Starting.\n"; flush stdout;
+      let i = ref 0 in
+      while true do
+        let () =
+          if clear_step > 0 && !i mod clear_step = 0 then begin
+            Printf.printf "[clear]\n";
+            iset := empty;
+            intset := IntSet.empty
+          end;
+          i := !i + 1;
+          Printf.printf "%d. " !i;
+          match get_action () with
+          | TestAdd -> test_add ()
+          | TestRemove -> test_remove ()
+          | TestSplit -> test_split ()
+          | TestBelow -> test_below ()
+        in check_correctness ()
+      done 
+    end
