@@ -1,3 +1,6 @@
+(**)
+
+
 (* Porownuje dwie listy.*)
 let rec equal_lists l1 l2 =
   match l1, l2 with
@@ -123,7 +126,8 @@ let test7 = test7 |> add (-8000, 7500) |> add (min_int, max_int);;
 (* Zastepujemy jednym, maksymalnym przedzialem. *)
 let test7 = List.fold_left (fun set interval ->
     let _ = mem (Random.int 20000 - 10000) set 
-    in set |> remove interval) test7 random_test_elem;;
+    in 
+    remove interval set) test7 random_test_elem;;
 assert (is_empty test7 |> not);; 
 
-print_string "Testing completed!\n";;
+print_string "Testing completed! Have a nice day!\n";;

@@ -1,9 +1,6 @@
 (* Author: Mateusz Dudziński (394171)
-   Reviewer: ?
+   Reviewer: Damian Chańko
    Zadanie 3: Modyikacja drzew WPF Sem. 2017Z *)
-
-(* Uwaga: drzewem zbalansowanym nazywam drzewo w ktorym dla kazdego
-   wierzcholka roznica wysokosci poddrzew zaczepionych w tym wierzcholku < 2 *)
 
 (* Zmieniam operator dodawania tak by inty nie przekrecaly sie. Tzn jesli
    suma jest wieksza niz max_int (mniejsza niz min_int)
@@ -19,8 +16,7 @@ let (+) a b =
   else failwith "Unexpected behaviour in addition."
 
 let (-) a b =
-  if a = b then 0
-  else
+  (* Case na przypadek odejmowania min_int'a bo nie mozna go pomnozyc *-1 !*)
   if b = min_int then
     a + max_int + 1
   else
@@ -45,6 +41,9 @@ let get_height = function
 let get_numb_elements = function
   | Nil -> 0
   | Node(_, _, _, _, number) -> number
+
+(* Uwaga: drzewem zbalansowanym nazywam drzewo w ktorym dla kazdego
+   wierzcholka roznica wysokosci poddrzew zaczepionych w tym wierzcholku < 2 *)
 
 (* Asercja: left_subt, right_subt to drzewa zbalansowane.
    Tworze nowe drzewo, licze jego wysokosc i liczbe elementow
@@ -88,7 +87,8 @@ let make_and_bal left_subt root_val right_subt =
   (* Jesli drzwo jest przeciazone w lewo... *)
   if height_difference >= 2 then
     let left_subt =
-      (* Jesli lewe poddrzewo jest plytsze niz prawe obracamy dla wygody. *)
+      (* Jesli lewe poddrzewo lewego drzewa jest plytsze 
+         niz prawe poddrzewo lewego drzewa obracamy dla wygody. *)
       if get_height_difference left_subt < 0 then rotate_right left_subt
       else left_subt
     in
@@ -237,7 +237,7 @@ let add (x, y) set =
   in
   set |> remove (x, y) |> add_simple (x, y)
 
-(* Zwraca krotke set elemtnow mniejszych, bool czy istnieje w secieoraz set
+(* Zwraca krotke: set elemtnow mniejszych, bool czy istnieje w secieoraz set
    elemetnow wiekszych wzgledem zmiennej split_with. *)
 let rec split split_with = function
   | Nil -> Nil, false, Nil
