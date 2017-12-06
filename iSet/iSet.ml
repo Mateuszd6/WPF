@@ -157,86 +157,6 @@ let iter f set = fold (fun x _ -> f(x) ; ()) set ()
 (* true wtw gdy istnieje przedzial w zbiorze do ktorego nalezy k. *)
 let rec mem k set = find_containing k set |> fst
 
-(* Usuwam wszystkie elemnty (x, y) ze zbioru przedzialow/ Istniaja maksymalnie
-   dwa przedzialy pzecinajace sie z (x, y) ale nie zawierajace sie. Wartosci
-   tych przedzialow zostana zmodyfikowane i beda one wstawione na nowo. *)
-let rec remove (x, y) set =
-  (* Usuwam najmniejszy przedzial ze zbioru. Zwracam wartosc tego przedzialu
-     oraz nowe zbalansowane drzewo bez tego elementu. *)
-  let rec remove_min_element = function
-    | Node(Nil, value, right_subt, _, _) -> value, right_subt
-    | Node(left_subt, value, right_subt, _, _) ->
-      let min_el, new_left_subt = remove_min_element left_subt
-      in
-      min_el, make_and_bal new_left_subt value right_subt
-    | _ -> failwith "Min element does not exist in the tree!"
-
-  (* Zalozenie: przedzial (x, y) znajduje sie w secie (a x-1 i y+1 nie).
-     Usuwa zadany przedzial ze zbioru. Zwracane drzewo jest zbalansowane. *)
-  and remove_one (x, y) = function
-    | Node(left_subt, (root_x, root_y), right_subt, _, _) ->
-      (* Znalezlismy szukany przedzial usuwany go i tworzymy nowe drzewo
-         z dwoch poddrzew obecnego. *)
-      if root_x = x && root_y = y then
-        if right_subt = Nil then left_subt
-        else
-          (* Usuwamy najmniejszy element z prawego poddrzewa.
-             Jest on nowym korzeniem. *)
-          let min_el, new_right_subt = remove_min_element right_subt in
-          make_and_bal left_subt min_el new_right_subt
-      else if root_x > y then
-        make_and_bal (remove_one (x, y) left_subt)
-          (root_x, root_y) right_subt
-      else if root_y < x then
-        make_and_bal left_subt (root_x, root_y)
-          (remove_one (x, y) right_subt)
-      else
-        failwith ("Given interval does not fully overlap with" ^
-                  " an interval found in the tree.")
-    | _ -> failwith "Given interval does not exists in the tree!"
-  (* Znajduje jakikolwiek przedzial pokrywajacy sie z (x, y). *)
-  and found_any_interpol = function
-    | Nil -> false, (0,0)
-    | Node(_, (_, root_y), right_subt, _, _) when root_y < x ->
-      found_any_interpol right_subt
-    | Node(left_subt, (root_x, _), _, _, _) when root_x > y ->
-      found_any_interpol left_subt
-    | Node(_, (root_x, root_y), _, _, _) -> true, (root_x, root_y)
-  in
-  let found_lb, lb_val = found_any_interpol set in
-  if found_lb then
-    let new_set = remove_one lb_val set
-    and add_left_bound = add_simple (fst lb_val, x-1)
-    and add_right_bound = add_simple (y+1, snd lb_val)
-    in 
-    let new_set = 
-      if fst lb_val < x && snd lb_val > y then
-        new_set |> add_left_bound |> add_right_bound
-      else if fst lb_val < x then
-        new_set |> add_left_bound
-      else if snd lb_val > y then
-        new_set |> add_right_bound
-      else
-        new_set
-    in
-    remove (x, y) new_set
-  else
-    set;;
-
-(* Dodaj przedzial (x-y) do zbioru. Najpierw wykonywana jest operacja
-   remove (x,y) by dodanie tego przedzialu mozliwe bylo za pomoca operacji
-   add_simple. *)
-let add (x, y) set =
-  (* Jesli x-1(y+1) znajduje sie w zbiorze to wstawiany przedzial nalezy
-     rozszerzyc z lewej(prawej) strony. *)
-  let found_left, (left_x, _) = find_containing (x-1) set
-  and found_right, (_, right_y) = find_containing (y+1) set
-  in
-  let x = if found_left then left_x else x
-  and y = if found_right then right_y else y
-  in
-  set |> remove (x, y) |> add_simple (x, y)
-
 (* Zwraca krotke: set elemtnow mniejszych, bool czy istnieje w secieoraz set
    elemetnow wiekszych wzgledem zmiennej split_with. *)
 let rec split split_with = function
@@ -261,6 +181,45 @@ let rec split split_with = function
         else right_subt |> add_simple (split_with+1, root_y)
       in
       new_left_subt, true, new_right_subt
+
+(* Usuwam wszystkie elemnty (x, y) ze zbioru przedzialow stosujac funkcje 
+   split. *)
+let rec remove (x, y) set =
+  (* Usuwam najmniejszy przedzial ze zbioru. Zwracam wartosc tego przedzialu
+     oraz nowe zbalansowane drzewo bez tego elementu. *)
+  let rec remove_min_element = function
+    | Node(Nil, value, right_subt, _, _) -> value, right_subt
+    | Node(left_subt, value, right_subt, _, _) ->
+      let min_el, new_left_subt = remove_min_element left_subt
+      in
+      min_el, make_and_bal new_left_subt value right_subt
+    | _ -> failwith "Min element does not exist in the tree!"
+  (* Zalozenie: przedzial (x, y) znajduje sie w secie (a x-1 i y+1 nie).
+     Usuwa zadany przedzial ze zbioru. Zwracane drzewo jest zbalansowane. *)
+  in
+  let (lower_than, _, _) = split x set 
+  and (_, _, greater_than) = split y set
+  in
+  if greater_than = Nil then lower_than
+  else
+    (* Usuwamy najmniejszy element z prawego poddrzewa.
+        Jest on nowym korzeniem. *)
+    let min_el, new_greater_than = remove_min_element greater_than in
+    make_and_bal lower_than min_el new_greater_than
+
+(* Dodaj przedzial (x-y) do zbioru. Najpierw wykonywana jest operacja
+   remove (x,y) by dodanie tego przedzialu mozliwe bylo za pomoca operacji
+   add_simple. *)
+let add (x, y) set =
+  (* Jesli x-1(y+1) znajduje sie w zbiorze to wstawiany przedzial nalezy
+     rozszerzyc z lewej(prawej) strony. *)
+  let found_left, (left_x, _) = find_containing (x-1) set
+  and found_right, (_, right_y) = find_containing (y+1) set
+  in
+  let x = if found_left then left_x else x
+  and y = if found_right then right_y else y
+  in
+  set |> remove (x, y) |> add_simple (x, y)
 
 (* Liczba elementow <= k. Dzieki zastosowaniu zmienionych operatorow
    Nie ma problemow z wyjsciem poza zakres typu int. *)

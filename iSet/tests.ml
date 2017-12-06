@@ -1,6 +1,3 @@
-(**)
-
-
 (* Porownuje dwie listy.*)
 let rec equal_lists l1 l2 =
   match l1, l2 with
