@@ -1,3 +1,13 @@
-/**/.vscode/
+# Exclude all files without extension.
+*
+!*/
+!*.*
+
+# Exclude all ocaml linking files.
 *.cmi
 *.cmo
+*.cmx
+*.o
+
+/**/.vscode/
+/**/tmp/
