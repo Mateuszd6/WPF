@@ -2,28 +2,28 @@
    Reviewer: Mateusz Rychlicki
    Zadanie 5: Sortowanie topologiczne WPF Sem. 2017Z *)
 
-open PMap;;
+open PMap
 
 (** wyjatek rzucany przez [topol] gdy zaleznosci sa cykliczne *)
-exception Cykliczne;;
+exception Cykliczne
 
 (* Typ odwiedzonego wierzcholka.*) 
-type vertex_type =
+type visit_type =
   (* Wierzcholek jest obecnie przetwarzany ale nie jest jeszcze opuszczony. *)
   | Visited  
   (* Wierzcholek zostal juz przetworzony (tzn DFS z niego wyszedl. *)
   | Explored
   (* Wierzcholek jeszcze nie odwiedzony. *)  
-  | NotVisited;;
+  | NotVisited
 
 (* Typ uzyty przy reprezentacji grafu. Grapf reprezentujemy jako mape postaci 
    wartosc (typu 'a) w 'a node. node posiada informacje o tym czy wierzcholek 
-   jest przetwarzany (vertex_type) oraz liste krawedzi. *)
+   jest przetwarzany (visit_type) oraz liste krawedzi. *)
 type 'a node =
   {
-    mutable vert_type    : vertex_type;
+    mutable vis_type    : visit_type;
     mutable childs       : 'a list;
-  };;
+  }
 
 (* Buduje graf z listy wierzcholkow takiej jak w specyfikacji zadania. *)
 let make_graph l = 
@@ -36,8 +36,12 @@ let make_graph l =
       found_node.childs <- l @ found_node.childs;
       acc
     else
-      add v { vert_type = NotVisited; childs = l} acc) PMap.empty l
+      add v { vis_type = NotVisited; childs = l} acc) PMap.empty l
 
+(** Dla danej listy [(a_1,[a_11;...;a_1n]); ...; (a_m,[a_m1;...;a_mk])] 
+    zwraca liste, na ktorej kazdy z elementow a_i oraz a_ij wystepuje
+    dokladnie raz i ktora jest uporzadkowana w taki sposob, ze kazdy
+    element a_i jest przed kazdym z elementow a_i1 ... a_il *)
 let topol l =
   let graph = ref (make_graph l)
   and res = ref []
@@ -47,14 +51,14 @@ let topol l =
   let rec dfs value =
     let nod = PMap.find value !graph 
     in
-    nod.vert_type <- Visited;
+    nod.vis_type <- Visited;
     List.iter process_child nod.childs;
     res := value::(!res);
-    nod.vert_type <- Explored
+    nod.vis_type <- Explored
   (* Sprawdz czy mozna odwiedzic i ew. odwiedz wierzcholek [v]. *)
   and process_child v =
     if PMap.mem v !graph then begin
-      match (PMap.find v !graph).vert_type with
+      match (PMap.find v !graph).vis_type with
       (* Gdy trafiliśmy do wierzcholka na przetwarzanego obecnie to cykl. *)
       | Visited -> raise Cykliczne
       | NotVisited -> dfs v
@@ -63,17 +67,18 @@ let topol l =
     (* Jesli wierzcholek nie wystapil jako pierwszy element z pary w wejsciowej
        liscie musimy go dodac do grafu. *)
     else begin
-      graph := PMap.add v { vert_type = Explored ; childs = [] } (!graph);
+      graph := PMap.add v { vis_type = Explored ; childs = [] } (!graph);
       res := v::(!res)
     end
   in
   (* Idziemy pokolei po wszystkich wierzcholkach i wywolujemy DFS'a na jeszcze 
      nie odwiedzonych. *)
   List.iter 
-    (fun x -> if (PMap.find x !graph).vert_type = NotVisited then dfs x)
+    (fun x -> if (PMap.find x !graph).vis_type = NotVisited then dfs x)
     (List.map fst l);
   !res
 
+(*
 (* --------------------------------- Testy --------------------------------- *)
 exception WrongOrder;;
 exception IncompleteOutput;;
@@ -85,21 +90,21 @@ exception IncompleteOutput;;
 let check l =
   let top_order = topol l
   and graph = ref (List.fold_left (fun acc (v, l) -> 
-      add v { vert_type = NotVisited; childs = l} acc) PMap.empty l)
+      add v { vis_type = NotVisited; childs = l} acc) PMap.empty l)
   in 
   let rec dfs v search_for = 
     if PMap.mem v !graph then begin
-      (PMap.find v !graph).vert_type <- Visited;
+      (PMap.find v !graph).vis_type <- Visited;
       List.iter 
         (fun x -> 
            if x = search_for then 
              raise WrongOrder 
            else if PMap.mem x !graph then begin
-             if (PMap.find x !graph).vert_type = NotVisited then 
+             if (PMap.find x !graph).vis_type = NotVisited then 
                dfs x search_for 
            end
            else
-             graph := PMap.add x { vert_type = Visited; childs = [] } (!graph))
+             graph := PMap.add x { vis_type = Visited; childs = [] } (!graph))
         (PMap.find v !graph).childs 
     end
   and check_top_order = function
@@ -180,3 +185,4 @@ let large_test =
 assert (topol large_test = aux);;
 
 print_string "Testing completed!!\n";;
+*)
