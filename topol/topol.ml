@@ -31,10 +31,11 @@ let make_graph l =
     (* Na wypadek grafow reprezentowanych np [(1, [2]); (1, [3])]. Jesli 
         jakas tablica sasiadow jest juz w mapie to dodajemy do niej nowa 
         liste. Wirzcholki moga sie powtarzac, nie jest to problem. *)
-    if PMap.mem v acc then
+    if PMap.mem v acc then begin
       let found_node = (PMap.find v acc) in 
       found_node.childs <- l @ found_node.childs;
       acc
+    end
     else
       add v { vis_type = NotVisited; childs = l} acc) PMap.empty l
 
