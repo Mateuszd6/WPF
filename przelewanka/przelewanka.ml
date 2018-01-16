@@ -82,7 +82,6 @@ let przelewanka input_arr =
       let curr_state = Queue.pop queue in
       process_state curr_state (Hashtbl.find hash_tab curr_state)
     done;
-    match Hashtbl.find_opt hash_tab goal_state with
-      | Some(res) -> res
-      | None -> -1
+    try Hashtbl.find hash_tab goal_state with
+    | Not_found -> -1
   end;;
